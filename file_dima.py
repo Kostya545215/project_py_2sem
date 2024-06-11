@@ -2,9 +2,7 @@ import telebot as tb
 from telebot import types
 import sqlite3
 bot = tb.TeleBot('6406717020:AAEJYdw0pjQE-cykfr5tzrw3sDmUic8PdQw')
-
-
-
+#лежать
 def generate_physics_menu(chat_id):
     markup = types.InlineKeyboardMarkup(row_width=1)
     mechanics = types.InlineKeyboardButton('Механика', callback_data='sect1')
