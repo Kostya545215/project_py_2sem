@@ -3,6 +3,8 @@ from telebot import types
 import sqlite3
 bot = tb.TeleBot('6406717020:AAEJYdw0pjQE-cykfr5tzrw3sDmUic8PdQw')
 
+
+# показ главного меню с разделами
 def generate_physics_menu(chat_id):
     markup = types.InlineKeyboardMarkup(row_width=1)
     mechanics = types.InlineKeyboardButton('Механика', callback_data='sect1')
@@ -14,23 +16,27 @@ def generate_physics_menu(chat_id):
     bot.send_message(chat_id, '<b>Выберите раздел физики</b>', reply_markup=markup, parse_mode='html') 
 
 
+# Функция которая запускает бота и выводит меню разделов при написании команды /start
 @bot.message_handler(commands=['start'])
 def topic(message):
     bot.delete_message(message.chat.id, message.message_id)
     generate_physics_menu(message.chat.id)
 
 
+# Переход к разделам
 @bot.message_handler(func=lambda message: message.text.lower() == 'к разделам')
 def handle_sections_text(message):
     generate_physics_menu(message.chat.id)
 
 
+# Переход к подразделам
 @bot.callback_query_handler(func=lambda callback: callback.data == 'sections')
 def topic(callback):
     bot.delete_message(callback.message.chat.id, callback.message.message_id)
     generate_physics_menu(callback.message.chat.id)
 
 
+# Вывод ответа
 @bot.callback_query_handler(func=lambda callback: callback.data.startswith('ans_'))
 def ans(callback):
     # bot.delete_message(callback.message.chat.id, callback.message.message_id)
@@ -38,11 +44,13 @@ def ans(callback):
 
 
 num = [0]
-max_task =[0]
+max_task = [0]
 
 
+# блок функций действующих после нажатий кнопок
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
+    # реализация меню подразделов
     def subsection(section, *args):
         c = 0
         buttons = []
@@ -63,8 +71,8 @@ def callback_message(callback):
     }
 
     if callback.data in sections:
-        subsection(*sections[callback.data]) 
-        
+        subsection(*sections[callback.data])
+    # реализация выбора сложности задачи
     if callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 2:
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         markup = types.InlineKeyboardMarkup(row_width=2)
@@ -75,7 +83,7 @@ def callback_message(callback):
         markup.add(first, second, third, fourth)
 
         bot.send_message(callback.message.chat.id, 'Выберите уровень сложности', reply_markup=markup)
-
+    # Показ задачи, ее картинки, и перелистывание задач
     if (callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 3
             or callback.data[-4:] == 'back' or callback.data[-4:] == 'next'):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
@@ -94,14 +102,14 @@ def callback_message(callback):
                 num[0] = (num[0] - 1) % max_task[0]
             callback.data = callback.data[:9]
         callback.data = callback.data[:9]
-
+        # вывод задачи из БД
         conn = sqlite3.connect('физика.db')
         cursor = conn.cursor()
         cursor.execute(
-            'SELECT задача, ответ, фото  FROM задачи  WHERE раздел=? AND подраздел = ? AND сложность = ? ORDER BY сложность LIMIT ?,1 ',
+            'SELECT задача, ответ, фото  FROM задачи \
+             WHERE раздел=? AND подраздел = ? AND сложность = ? ORDER BY сложность LIMIT ?,1 ',
             (section, subsection, diff, num[0]))
         t = cursor.fetchone()
-        #print(t)
         task = t[0]
         ans = t[1]
 
@@ -109,9 +117,7 @@ def callback_message(callback):
             'SELECT count(задача)  FROM задачи  WHERE раздел=? AND подраздел = ? AND сложность = ? ORDER BY сложность ',
             (section, subsection, diff))
         max_task[0] = int(cursor.fetchone()[0])
-        #print(max_task[0])
-
-        #photo = open(img, 'rb')
+        # реализация кнопок переходов к задачам, разделам, подразделам и вывода ответа
         markup = types.InlineKeyboardMarkup(row_width=3)
         last_task = types.InlineKeyboardButton('Прошлая задача', callback_data=f'{callback.data}_back')
         next_task = types.InlineKeyboardButton('Cледующая задача', callback_data=f'{callback.data}_next')
@@ -119,13 +125,13 @@ def callback_message(callback):
         sections = types.InlineKeyboardButton('К разделам', callback_data='sections')
         subsections = types.InlineKeyboardButton('К подразделам', callback_data=callback_subsection)
         markup.add(last_task, answer, next_task, sections, subsections)
+        # вывод картинки к задаче при ее наличии
         try:
             img = str(t[2])
             photo = open(img, 'rb')
             bot.send_photo(callback.message.chat.id, photo, caption=f'{task} ', reply_markup=markup)
         except Exception:
-            bot.send_message(callback.message.chat.id,f'{task} ', reply_markup=markup)
-
+            bot.send_message(callback.message.chat.id, f'{task} ', reply_markup=markup)
 
 
 bot.polling(none_stop=True)
