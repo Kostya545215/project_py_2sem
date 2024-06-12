@@ -1,8 +1,17 @@
 import telebot as tb
 from telebot import types
 import sqlite3
-bot = tb.TeleBot('6406717020:AAEJYdw0pjQE-cykfr5tzrw3sDmUic8PdQw')
 
+bot = tb.TeleBot('6406717020:AAEJYdw0pjQE-cykfr5tzrw3sDmUic8PdQw')
+section1 = []
+subsection1 = []
+diff1 = []
+task = []
+answer1 = []
+image = ['']
+
+
+# показ главного меню с разделами
 def generate_physics_menu(chat_id):
     markup = types.InlineKeyboardMarkup(row_width=1)
     mechanics = types.InlineKeyboardButton('Механика', callback_data='sect1')
@@ -11,8 +20,11 @@ def generate_physics_menu(chat_id):
     optics = tb.types.InlineKeyboardButton('Оптика', callback_data='sect4')
     quantums = tb.types.InlineKeyboardButton('Квантовая и ядерная физика', callback_data='sect5')
     markup.add(mechanics, thermodynamics, electricity, optics, quantums)
-    bot.send_message(chat_id, '<b>Выберите раздел физики куда вы хотите добавить задачу</b>', reply_markup=markup, parse_mode='html')
+    bot.send_message(chat_id, '<b>Выберите раздел физики куда вы хотите добавить задачу</b>', 
+                     reply_markup=markup, parse_mode='html')
 
+
+# Функция которая запускает режим добавления и выводит меня разделов при написании команды /add_problem
 @bot.message_handler(commands=['add_problem'])
 def topic(message):
     bot.delete_message(message.chat.id, message.message_id)
@@ -20,16 +32,21 @@ def topic(message):
     generate_physics_menu(message.chat.id)
 
 
+# функция добавляющая фото к задаче
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
-    num[0]+=1
     photo = message.photo[-1]
     file_info = bot.get_file(photo.file_id)
     downloaded_file = bot.download_file(file_info.file_path)
-    # сюда пишешь путь до папки где будут появляться картинки
-    save_path = f'C:/Users/Konstantin/Desktop/Уник/PythonPrograms/Tg_Bot/photos/photo_{section1[-1]}_{subsection1[-1]}_{diff1[-1]}_num{num[0]}.jpg'
+    conn = sqlite3.connect('физика.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT max( id ) FROM задачи')
+    id = int(cursor.fetchall()[0][0])+1
+    # Здесь указывается путь до папки где будут сохраняться картинки
+    save_path = \
+        f'C:/Users/Admin/Desktop/bot/pythonProject/images/photo_{section1[-1]}_{subsection1[-1]}_{diff1[-1]}_id{id}.jpg'
     image.append(save_path)
-    print(section1[-1], subsection1[-1], diff1[-1], task[-1], answer1[-1], image[-1])
+    #print(section1[-1], subsection1[-1], diff1[-1], task[-1], answer1[-1], image[-1])
     with open(save_path, 'wb') as new_file:
         new_file.write(downloaded_file)
     bot.reply_to(message, 'Фотография сохранена.')
@@ -39,17 +56,13 @@ def handle_photo(message):
     markup.add(yes, no)
     task_photo = open(save_path, 'rb')
     bot.send_photo(message.chat.id, task_photo,
-                   caption=f'Ваша задача: {task[-1]}. \n Ответ: {answer1[-1]} ',reply_markup=markup)
+                   caption=f'Ваша задача: {task[-1]}. \n Ответ: {answer1[-1]} ', reply_markup=markup)
 
-num=[0]
-section1 = []
-subsection1 = []
-diff1 = []
-task = []
-answer1 = []
-image = ['']
+
+# блок функций действующих после нажатия кнопок
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
+    # реализация меню подразделов
     def subsection(section, *args):
         c = 0
         buttons = []
@@ -60,7 +73,7 @@ def callback_message(callback):
         markup.add(*buttons)
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, f'<b>Выберите подраздел</b>', reply_markup=markup, parse_mode='html')
-
+    # реализация задачи без картинки
     if callback.data == 'нет_фото':
         image[-1] = None
         markup = types.InlineKeyboardMarkup(row_width=2)
@@ -68,8 +81,9 @@ def callback_message(callback):
         no = types.InlineKeyboardButton('Редактировать', callback_data='нет')
         markup.add(yes, no)
 
-        bot.send_message(callback.message.chat.id,
-                       f'Ваша задача {task[-1]}. Ответ: {answer1[-1]} ', reply_markup=markup)
+        bot.send_message(callback.message.chat.id, f'Ваша задача {task[-1]}. Ответ: {answer1[-1]} ',
+                         reply_markup=markup)
+    # Добавление задачи в базу данных при корректном вводе
     if callback.data == 'да':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         conn = sqlite3.connect('физика.db')
@@ -84,6 +98,7 @@ def callback_message(callback):
 
         bot.send_message(callback.message.chat.id, 'Задача успешно добавлена')
         generate_physics_menu(callback.message.chat.id)
+    # пвоторение блока функций по вводу задачи при необходимости редактирования
     if callback.data == 'нет':
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         #bot.send_message(callback.message.chat.id, '')
@@ -100,7 +115,7 @@ def callback_message(callback):
 
     if callback.data in sections:
         subsection(*sections[callback.data])
-
+    # реализация выбора сложности задачи
     if callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 2:
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         #print(callback.data)
@@ -112,7 +127,8 @@ def callback_message(callback):
         markup.add(first, second, third, fourth)
 
         bot.send_message(callback.message.chat.id, 'Выберите уровень сложности', reply_markup=markup)
-
+    # здесь происходит сбор информации о выбранных разделах подразделах и сложности 
+    # запускается процесс ввода новой задачи
     if callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 3:
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
 
@@ -129,19 +145,20 @@ def callback_message(callback):
         bot.register_next_step_handler(mess, task_insert)
 
 
+# Добавление текста задачи
 def task_insert(message):
     task.append(message.text)
     bot.send_message(message.chat.id, "Введите ответ к задаче")
     bot.register_next_step_handler(message, ans)
 
 
+# Добавление ответа к задаче
 def ans(message):
     answer1.append(message.text)
-
     markup = types.InlineKeyboardMarkup(row_width=1)
     image = types.InlineKeyboardButton('Фото не прилагается', callback_data='нет_фото')
     markup.add(image)
     bot.send_message(message.chat.id, "Отправьте фото к задаче, если оно прилагается", reply_markup=markup)
 
 
-bot.polling(none_stop = True)
+bot.polling(none_stop=True)
