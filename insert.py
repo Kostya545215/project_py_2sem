@@ -44,7 +44,7 @@ def handle_photo(message):
     id = int(cursor.fetchall()[0][0])+1
     # Здесь указывается путь до папки где будут сохраняться картинки
     save_path = \
-        f'C:/Users/Admin/Desktop/bot/pythonProject/images/photo_{section1[-1]}_{subsection1[-1]}_{diff1[-1]}_id{id}.jpg'
+        f'C:/Users/Konstantin/Desktop/Уник/PythonPrograms/Tg_Bot/photos/photo_{section1[-1]}_{subsection1[-1]}_{diff1[-1]}_id{id}.jpg'
     image.append(save_path)
     #print(section1[-1], subsection1[-1], diff1[-1], task[-1], answer1[-1], image[-1])
     with open(save_path, 'wb') as new_file:
