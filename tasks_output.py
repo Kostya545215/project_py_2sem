@@ -43,8 +43,6 @@ max_task =[0]
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
-    
-    #функция для формирования подразделов
     def subsection(section, *args):
         c = 0
         buttons = []
@@ -67,7 +65,7 @@ def callback_message(callback):
     if callback.data in sections:
         subsection(*sections[callback.data]) 
         
-    if callback.data.startswith('sect') and len(callback.data.split('_')) == 2:
+    if callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 2:
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         markup = types.InlineKeyboardMarkup(row_width=2)
         first = types.InlineKeyboardButton('1', callback_data=f'{callback.data}_1')
@@ -78,7 +76,7 @@ def callback_message(callback):
 
         bot.send_message(callback.message.chat.id, 'Выберите уровень сложности', reply_markup=markup)
 
-    if (callback.data.startswith('sect') and len(callback.data.split('_')) == 3
+    if (callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 3
             or callback.data[-4:] == 'back' or callback.data[-4:] == 'next'):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         callback_subsection = str(callback.data)[:5]
@@ -88,34 +86,32 @@ def callback_message(callback):
         section = search[0]
         subsection = search[1]
         diff = search[2]
-
-        #print(num[0])
+        
         if callback.data[-4:] in ('next', 'back'):
             if callback.data[-4:] == 'next':
                 num[0] = (num[0] + 1) % max_task[0]
             else:  # callback.data[-4:] == 'back'
                 num[0] = (num[0] - 1) % max_task[0]
             callback.data = callback.data[:9]
-
         callback.data = callback.data[:9]
-        #print(callback.data)
+
         conn = sqlite3.connect('физика.db')
         cursor = conn.cursor()
-
         cursor.execute(
-            'SELECT задача, ответ FROM задачи  WHERE раздел=? AND подраздел = ? AND сложность = ? ORDER BY сложность LIMIT ?,1 ',
+            'SELECT задача, ответ, фото  FROM задачи  WHERE раздел=? AND подраздел = ? AND сложность = ? ORDER BY сложность LIMIT ?,1 ',
             (section, subsection, diff, num[0]))
         t = cursor.fetchone()
         #print(t)
         task = t[0]
         ans = t[1]
+
         cursor.execute(
             'SELECT count(задача)  FROM задачи  WHERE раздел=? AND подраздел = ? AND сложность = ? ORDER BY сложность ',
             (section, subsection, diff))
         max_task[0] = int(cursor.fetchone()[0])
-        print(max_task[0])
+        #print(max_task[0])
 
-        #photo = open('cats_geometry.jpg', 'rb')
+        #photo = open(img, 'rb')
         markup = types.InlineKeyboardMarkup(row_width=3)
         last_task = types.InlineKeyboardButton('Прошлая задача', callback_data=f'{callback.data}_back')
         next_task = types.InlineKeyboardButton('Cледующая задача', callback_data=f'{callback.data}_next')
@@ -129,6 +125,7 @@ def callback_message(callback):
             bot.send_photo(callback.message.chat.id, photo, caption=f'{task} ', reply_markup=markup)
         except Exception:
             bot.send_message(callback.message.chat.id,f'{task} ', reply_markup=markup)
+
 
 
 bot.polling(none_stop=True)
