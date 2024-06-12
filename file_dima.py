@@ -2,7 +2,7 @@ import telebot as tb
 from telebot import types
 import sqlite3
 bot = tb.TeleBot('6406717020:AAEJYdw0pjQE-cykfr5tzrw3sDmUic8PdQw')
-#лежать
+
 def generate_physics_menu(chat_id):
     markup = types.InlineKeyboardMarkup(row_width=1)
     mechanics = types.InlineKeyboardButton('Механика', callback_data='sect1')
@@ -43,6 +43,8 @@ max_task =[0]
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_message(callback):
+    
+    #функция для формирования подразделов
     def subsection(section, *args):
         c = 0
         buttons = []
@@ -54,18 +56,18 @@ def callback_message(callback):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         bot.send_message(callback.message.chat.id, f'<b>Выберите подраздел</b>', reply_markup=markup, parse_mode='html')
 
-    if callback.data == 'sect1':
-        subsection('sect1', 'Кинематика', 'Динамика', 'Статика')
-    if callback.data == 'sect2':
-        subsection('sect2', 'Молекулярная физика', 'Изопроцессы', 'Влажность', 'Тепловые процессы')
-    if callback.data == 'sect3':
-        subsection('sect3', 'Электростатика', 'Электродинамика', 'Электромагнитные волны', 'Магнетизм')
-    if callback.data == 'sect4':
-        subsection('sect4', 'Геометрическая оптика', 'Волновая оптика')
-    if callback.data == 'sect5':
-        subsection('sect5', 'Квантовая механика', 'Радиоактивность', 'Специальная теория относительности')
+    sections = {
+        'sect1': ('sect1', 'Кинематика', 'Динамика', 'Статика'),
+        'sect2': ('sect2', 'Молекулярная физика', 'Изопроцессы', 'Влажность', 'Тепловые процессы'),
+        'sect3': ('sect3', 'Электростатика', 'Электродинамика', 'Электромагнитные волны', 'Магнетизм'),
+        'sect4': ('sect4', 'Геометрическая оптика', 'Волновая оптика'),
+        'sect5': ('sect5', 'Квантовая механика', 'Радиоактивность', 'Специальная теория относительности'),
+    }
+
+    if callback.data in sections:
+        subsection(*sections[callback.data]) 
         
-    if callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 2:
+    if callback.data.startswith('sect') and len(callback.data.split('_')) == 2:
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         markup = types.InlineKeyboardMarkup(row_width=2)
         first = types.InlineKeyboardButton('1', callback_data=f'{callback.data}_1')
@@ -76,7 +78,7 @@ def callback_message(callback):
 
         bot.send_message(callback.message.chat.id, 'Выберите уровень сложности', reply_markup=markup)
 
-    if (callback.data.startswith('sect') and len(list(map(str, callback.data.split('_')))) == 3
+    if (callback.data.startswith('sect') and len(callback.data.split('_')) == 3
             or callback.data[-4:] == 'back' or callback.data[-4:] == 'next'):
         bot.delete_message(callback.message.chat.id, callback.message.message_id)
         callback_subsection = str(callback.data)[:5]
@@ -87,20 +89,13 @@ def callback_message(callback):
         subsection = search[1]
         diff = search[2]
 
-        print(num[0])
-        if num[0] == max_task[0] - 1 and callback.data[-4:] == 'next':
-            num[0] = 0
-            callback.data = callback.data[:9]
-        elif num[0] == 0 and callback.data[-4:] == 'back' :
-            num[0] = max_task[0] - 1
-            callback.data = callback.data[:9]
-        else:
+        #print(num[0])
+        if callback.data[-4:] in ('next', 'back'):
             if callback.data[-4:] == 'next':
-                num[0] += 1
-                callback.data = callback.data[:9]
-            if callback.data[-4:] == 'back':
-                num[0] -= 1
-                callback.data = callback.data[:9]
+                num[0] = (num[0] + 1) % max_task[0]
+            else:  # callback.data[-4:] == 'back'
+                num[0] = (num[0] - 1) % max_task[0]
+            callback.data = callback.data[:9]
 
         callback.data = callback.data[:9]
         #print(callback.data)
