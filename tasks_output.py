@@ -115,7 +115,7 @@ def callback_message(callback):
         max_task[0] = int(cursor.fetchone()[0])
         print(max_task[0])
 
-        photo = open('cats_geometry.jpg', 'rb')
+        #photo = open('cats_geometry.jpg', 'rb')
         markup = types.InlineKeyboardMarkup(row_width=3)
         last_task = types.InlineKeyboardButton('Прошлая задача', callback_data=f'{callback.data}_back')
         next_task = types.InlineKeyboardButton('Cледующая задача', callback_data=f'{callback.data}_next')
@@ -123,7 +123,12 @@ def callback_message(callback):
         sections = types.InlineKeyboardButton('К разделам', callback_data='sections')
         subsections = types.InlineKeyboardButton('К подразделам', callback_data=callback_subsection)
         markup.add(last_task, answer, next_task, sections, subsections)
-        bot.send_photo(callback.message.chat.id, photo, caption=f'{task} ', reply_markup=markup)
+        try:
+            img = str(t[2])
+            photo = open(img, 'rb')
+            bot.send_photo(callback.message.chat.id, photo, caption=f'{task} ', reply_markup=markup)
+        except Exception:
+            bot.send_message(callback.message.chat.id,f'{task} ', reply_markup=markup)
 
 
 bot.polling(none_stop=True)
